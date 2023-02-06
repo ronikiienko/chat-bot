@@ -1,6 +1,6 @@
 const path = require('path');
 const Datastore = require('nedb-promises');
-const {Telegraf} = require('telegraf');
+const {Telegraf, Markup} = require('telegraf');
 const {generateAnswer} = require('./generator');
 const {defaultGeneratorConfigs} = require('./consts');
 
@@ -9,15 +9,15 @@ let configsDb = Datastore.create(path.join('configs.db'));
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const handleUser = async (from, messageText) => {
-    const isPassword = messageText === process.env.ADMIN_PASSWORD;
+const handleUser = async (ctx) => {
+    const from = ctx.message.from;
     const existingUser = await usersDb.findOne({userId: from.id});
     if (existingUser) {
-        isPassword && await usersDb.updateOne({userId: from.id}, {isAdmin: isPassword});
         return existingUser;
     } else {
+        console.log('creating new user');
         return await usersDb.insertOne({
-            isAdmin: isPassword,
+            isAdmin: false,
             userId: from.id,
             username: from.first_name,
             temperature: defaultGeneratorConfigs.temperature,
@@ -26,11 +26,31 @@ const handleUser = async (from, messageText) => {
     }
 };
 
+const handleAdmin = async (ctx) => {
+    const from = ctx.message.from;
+    const isPassword = ctx.message.text === process.env.ADMIN_PASSWORD;
+    if (isPassword) {
+        const existingUser = await usersDb.findOne({userId: from.id});
+        if (existingUser.isAdmin) {
+            await ctx.sendMessage('You are already admin!');
+            return false;
+        } else {
+            await usersDb.update({userId: from.id}, {$set: {isAdmin: true}});
+            await ctx.sendMessage('You are admin now!');
+            return false;
+        }
+    } else {
+        return true;
+    }
+};
+
 bot.on('message', async (ctx) => {
     const messageText = ctx.message.text;
 
-    const user = await handleUser(ctx.message.from, messageText);
-    console.log(user);
+    const user = await handleUser(ctx);
+    if (!user) return;
+    const needToAnswer = await handleAdmin(ctx);
+    if (!needToAnswer) return;
 
     const answer = await generateAnswer(messageText, {model: user?.model, temperature: user?.temperature});
     if (answer) ctx.sendMessage(answer);
