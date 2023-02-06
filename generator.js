@@ -1,28 +1,25 @@
 const {Configuration, OpenAIApi} = require('openai');
+const {defaultGeneratorConfigs} = require('./consts');
 require('dotenv').config();
 
-console.log(process.env.OPENAI_API_KEY);
+console.log('Bot is on!');
+
 const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-const defaultConfigs = {
-    temperature: 0.5,
-    maxTokens: 20,
-    model: 'text-davinci-003',
-};
 
 /**
  *
  * @param question {string}
  * @param configs {object}
- * @param {'text-davinci-003'|'text-curie-001'|'text-babbage-001'|'text-ada-001'} configs.model
- * @param {number} configs.temperature - Number from 0 to 1
- * @param {number} configs.maxTokens - How many tokens can answer be in length. For English text, 1 token is approximately 4 characters or 0.75 words.
+ * @param {'text-davinci-003'|'text-curie-001'|'text-babbage-001'|'text-ada-001'} [configs.model]
+ * @param {number} [configs.temperature] - Number from 0 to 1
+ * @param {number} [configs.maxTokens] - How many tokens can answer be in length. For English text, 1 token is approximately 4 characters or 0.75 words.
  * @return {Promise<string>}
  */
-const generateAnswer = async (question, configs = defaultConfigs) => {
+const generateAnswer = async (question, configs = defaultGeneratorConfigs) => {
     if (!question) return 'could not get answer';
     try {
         const completion = await openai.createCompletion({
