@@ -9,6 +9,19 @@ let configsDb = Datastore.create(path.join('configs.db'));
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+const userKeyboard = Markup.keyboard([
+    ['Settings  ⚙️'],
+    ['See current settings '],
+    ['Help  ❓'],
+]).oneTime().resize();
+
+const adminKeyboard = Markup.keyboard([
+    ['Settings  ⚙️'],
+    ['See current settings'],
+    ['Help  ❓'],
+    ['Admin features  🛠️'],
+]).oneTime().resize();
+
 const handleUser = async (ctx) => {
     const from = ctx.message.from;
     const existingUser = await usersDb.findOne({userId: from.id});
