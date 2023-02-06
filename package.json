@@ -1,0 +1,24 @@
+{
+  "name": "chat-bot",
+  "version": "1.0.0",
+  "description": "Telegram chat bot that uses OpenAI completion API. Can answer most of your questions.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ronikiienko/chat-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ronikiienko/chat-bot/issues"
+  },
+  "homepage": "https://github.com/ronikiienko/chat-bot#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "openai": "^3.1.0",
+    "telegraf": "^4.11.2"
+  }
+}
