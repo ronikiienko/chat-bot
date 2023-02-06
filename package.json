@@ -18,6 +18,7 @@
   "homepage": "https://github.com/ronikiienko/chat-bot#readme",
   "dependencies": {
     "dotenv": "^16.0.3",
+    "nedb-promises": "^6.2.1",
     "openai": "^3.1.0",
     "telegraf": "^4.11.2"
   }
