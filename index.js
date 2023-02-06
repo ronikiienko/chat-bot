@@ -23,12 +23,26 @@ const adminKeyboard = Markup.keyboard([
 ]).oneTime().resize();
 
 const inlineSettingsKeyboard = [[
-    {text: 'Set AI model', callback_data: 'set_ai_model'},
-    {text: 'Set temperature', callback_data: 'set_temperature'},
+    {text: 'Set model', callback_data: 'set-model'},
+    {text: 'Set temperature', callback_data: 'set-temperature'},
 ]];
 
-const handleUser = async (ctx) => {
-    const from = ctx.message.from;
+const inlineModelSettingsKeyboard = [[
+    {text: 'Davinci', callback_data: 'model-text-davinci-003'},
+    {text: 'Curie', callback_data: 'model-text-curie-001'},
+    {text: 'Babbage', callback_data: 'model-text-babbage-001'},
+    {text: 'Ada', callback_data: 'model-text-ada-001'},
+]];
+
+const inlineTemperatureSettingsKeyboard = [[
+    {text: '0', callback_data: 'temperature-0'},
+    {text: '0.25', callback_data: 'temperature-0.25'},
+    {text: '0.5', callback_data: 'temperature-0.5'},
+    {text: '0.75', callback_data: 'temperature-0.75'},
+    {text: '1', callback_data: 'temperature-1'},
+]];
+
+const handleUser = async (from) => {
     const existingUser = await usersDb.findOne({userId: from.id});
     if (existingUser) {
         return existingUser;
@@ -37,15 +51,15 @@ const handleUser = async (ctx) => {
         return await usersDb.insertOne({
             isAdmin: false,
             userId: from.id,
-            username: from.first_name,
+            name: `${from.first_name}, ${from.last_name}`,
+            username: from.username,
             temperature: defaultGeneratorConfigs.temperature,
             model: defaultGeneratorConfigs.model,
         });
     }
 };
 
-const handleAdmin = async (ctx) => {
-    const from = ctx.message.from;
+const handleAdmin = async (from, ctx) => {
     const isPassword = ctx.message.text === process.env.ADMIN_PASSWORD;
     if (isPassword) {
         const existingUser = await usersDb.findOne({userId: from.id});
@@ -63,10 +77,28 @@ const handleAdmin = async (ctx) => {
 };
 
 bot.command('start', async (ctx) => {
-    const user = await handleUser(ctx);
+    const user = await handleUser(ctx.message.from);
     if (!user) return ctx.sendMessage('Something went wrong');
     const keyboard = user.isAdmin ? adminKeyboard : userKeyboard;
     ctx.reply('Ask me any questions!', keyboard);
+});
+
+bot.action(async (value, ctx) => {
+    const user = await handleUser(ctx.update.callback_query.from);
+    if (value === 'set-temperature') {
+        ctx.reply('Set temperature. The more the temperature - the more risky and chaotic answers are', {reply_markup: JSON.stringify({inline_keyboard: inlineTemperatureSettingsKeyboard})});
+    }
+    if (value === 'set-model') {
+        ctx.reply('Set AI model. Davinci is most advanced, but the slowest. Ada is the fastest but least advanced. But still, less advanced ones can perform some tasks well.', {reply_markup: JSON.stringify({inline_keyboard: inlineModelSettingsKeyboard})});
+    }
+    if (value.startsWith('temperature')) {
+        const newTemperature = Number(value.split('temperature-')[1]);
+        await usersDb.update({userId: user.userId}, {$set: {temperature: newTemperature}});
+    }
+    if (value.startsWith('model')) {
+        const newModel = value.split('model-')[1];
+        await usersDb.update({userId: user.userId}, {$set: {model: newModel}});
+    }
 });
 
 bot.hears('Help  ❓', (ctx) => {
@@ -78,16 +110,16 @@ bot.hears('Settings  ⚙️', (ctx) => {
 });
 
 bot.hears('See current settings  👁️', async (ctx) => {
-    const user = await handleUser(ctx);
+    const user = await handleUser(ctx.message.from);
     ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}`);
 });
 
 bot.on('message', async (ctx) => {
     const messageText = ctx.message.text;
 
-    const user = await handleUser(ctx);
+    const user = await handleUser(ctx.message.from);
     if (!user) return ctx.sendMessage('Something went wrong');
-    const needToAnswer = await handleAdmin(ctx);
+    const needToAnswer = await handleAdmin(ctx.message.from, ctx);
     if (!needToAnswer) return;
 
     const answer = await generateAnswer(messageText, {
