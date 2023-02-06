@@ -11,13 +11,13 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const userKeyboard = Markup.keyboard([
     ['Settings  ⚙️'],
-    ['See current settings '],
+    ['See current settings  👁️'],
     ['Help  ❓'],
 ]).oneTime().resize();
 
 const adminKeyboard = Markup.keyboard([
     ['Settings  ⚙️'],
-    ['See current settings'],
+    ['See current settings  👁️'],
     ['Help  ❓'],
     ['Admin features  🛠️'],
 ]).oneTime().resize();
@@ -57,11 +57,19 @@ const handleAdmin = async (ctx) => {
     }
 };
 
+bot.command('start', async (ctx) => {
+    const user = await handleUser(ctx);
+    if (!user) return ctx.sendMessage('Something went wrong');
+    const keyboard = user.isAdmin ? adminKeyboard : userKeyboard;
+    console.log('bro');
+    ctx.reply('Ask me any questions!', keyboard);
+});
+
 bot.on('message', async (ctx) => {
     const messageText = ctx.message.text;
 
     const user = await handleUser(ctx);
-    if (!user) return;
+    if (!user) return ctx.sendMessage('Something went wrong');
     const needToAnswer = await handleAdmin(ctx);
     if (!needToAnswer) return;
 
