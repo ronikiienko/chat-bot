@@ -2,7 +2,7 @@ const path = require('path');
 const Datastore = require('nedb-promises');
 const {Telegraf, Markup} = require('telegraf');
 const {generateAnswer} = require('./generator');
-const {defaultGeneratorConfigs} = require('./consts');
+const {defaultCompletionConfigs} = require('./consts');
 
 let usersDb = Datastore.create(path.join('users.db'));
 let configsDb = Datastore.create(path.join('configs.db'));
@@ -53,8 +53,8 @@ const handleUser = async (from) => {
             userId: from.id,
             name: `${from.first_name}, ${from.last_name}`,
             username: from.username,
-            temperature: defaultGeneratorConfigs.temperature,
-            model: defaultGeneratorConfigs.model,
+            temperature: defaultCompletionConfigs.temperature,
+            model: defaultCompletionConfigs.model,
         });
     }
 };
@@ -69,6 +69,7 @@ const handleAdmin = async (from, ctx) => {
         } else {
             await usersDb.update({userId: from.id}, {$set: {isAdmin: true}});
             await ctx.sendMessage('You are admin now!');
+            ctx.reply('Ask me any questions!', adminKeyboard);
             return false;
         }
     } else {
@@ -125,8 +126,9 @@ bot.on('message', async (ctx) => {
     const answer = await generateAnswer(messageText, {
         model: user?.model,
         temperature: user?.temperature,
-        maxTokens: defaultGeneratorConfigs.maxTokens,
+        maxTokens: defaultCompletionConfigs.maxTokens,
     });
+
     if (answer) ctx.sendMessage(answer);
 });
 
