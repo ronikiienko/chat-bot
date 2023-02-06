@@ -1,8 +1,9 @@
 const path = require('path');
 const Datastore = require('nedb-promises');
 const {Telegraf, Markup} = require('telegraf');
-const {generateAnswer} = require('./generator');
+const {generateAnswer, generatePicture} = require('./generator');
 const {defaultCompletionConfigs} = require('./consts');
+const {getSubstringAfterOccurrence} = require('./utils');
 
 let usersDb = Datastore.create(path.join('users.db'));
 let configsDb = Datastore.create(path.join('configs.db'));
@@ -93,11 +94,11 @@ bot.action(async (value, ctx) => {
         ctx.reply('Set AI model. Davinci is most advanced, but the slowest. Ada is the fastest but least advanced. But still, less advanced ones can perform some tasks well.', {reply_markup: JSON.stringify({inline_keyboard: inlineModelSettingsKeyboard})});
     }
     if (value.startsWith('temperature')) {
-        const newTemperature = Number(value.split('temperature-')[1]);
+        const newTemperature = Number(getSubstringAfterOccurrence(value, 'temperature-'));
         await usersDb.update({userId: user.userId}, {$set: {temperature: newTemperature}});
     }
     if (value.startsWith('model')) {
-        const newModel = value.split('model-')[1];
+        const newModel = getSubstringAfterOccurrence(value, 'model-');
         await usersDb.update({userId: user.userId}, {$set: {model: newModel}});
     }
 });
@@ -115,21 +116,29 @@ bot.hears('See current settings  👁️', async (ctx) => {
     ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}`);
 });
 
-bot.on('message', async (ctx) => {
-    const messageText = ctx.message.text;
+const handleMessage = (ctx) => {
 
+};
+
+bot.on('message', async (ctx) => {
     const user = await handleUser(ctx.message.from);
     if (!user) return ctx.sendMessage('Something went wrong');
     const needToAnswer = await handleAdmin(ctx.message.from, ctx);
     if (!needToAnswer) return;
 
-    const answer = await generateAnswer(messageText, {
-        model: user?.model,
-        temperature: user?.temperature,
-        maxTokens: defaultCompletionConfigs.maxTokens,
-    });
-
-    if (answer) ctx.sendMessage(answer);
+    const messageText = ctx.message.text;
+    if (messageText.startsWith('draw')) {
+        const drawPrompt = getSubstringAfterOccurrence(messageText, 'draw');
+        const picture = await generatePicture(drawPrompt);
+        if (picture) return ctx.sendPhoto(picture);
+    } else {
+        const answer = await generateAnswer(messageText, {
+            model: user?.model,
+            temperature: user?.temperature,
+            maxTokens: defaultCompletionConfigs.maxTokens,
+        });
+        if (answer) ctx.sendMessage(answer);
+    }
 });
 
 bot.launch();

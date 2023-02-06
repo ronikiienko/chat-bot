@@ -48,10 +48,10 @@ const generatePicture = async (prompt, configs = defaultImageConfigs) => {
         return response.data.data[0].url;
     } catch (e) {
         if (e.response.status === 429) return 'Error: Wait a bit. Too many requests from users';
-        console.log('errrrrrror:(', e.message, e.response.status);
-        return 'Error: Could not get answer';
+        console.log('errrrrrror:(', e.message, e.response.status, e);
+        return undefined;
     }
 };
 
 
-module.exports = {generateAnswer};
+module.exports = {generateAnswer, generatePicture};
