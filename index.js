@@ -43,6 +43,11 @@ const inlineTemperatureSettingsKeyboard = [[
     {text: '1', callback_data: 'temperature-1'},
 ]];
 
+const inlineAdminFeaturesKeyboard = [[
+    {text: 'See all users', callback_data: 'admin-see-all-users'},
+    {text: 'Set max tokens', callback_data: 'admin-set-max-tokens'},
+]];
+
 const handleUser = async (from) => {
     const existingUser = await usersDb.findOne({userId: from.id});
     if (existingUser) {
@@ -66,16 +71,20 @@ const handleAdmin = async (from, ctx) => {
         const existingUser = await usersDb.findOne({userId: from.id});
         if (existingUser.isAdmin) {
             await ctx.sendMessage('You are already admin!');
-            return false;
+            return true;
         } else {
             await usersDb.update({userId: from.id}, {$set: {isAdmin: true}});
             await ctx.sendMessage('You are admin now!');
             ctx.reply('Ask me any questions!', adminKeyboard);
-            return false;
+            return true;
         }
     } else {
-        return true;
+        return false;
     }
+};
+
+const handleSpecialCommands = async (from, ctx) => {
+
 };
 
 bot.command('start', async (ctx) => {
@@ -101,6 +110,13 @@ bot.action(async (value, ctx) => {
         const newModel = getSubstringAfterOccurrence(value, 'model-');
         await usersDb.update({userId: user.userId}, {$set: {model: newModel}});
     }
+    if (!user.isAdmin && value.startsWith('admin')) return;
+    if (value === 'admin-see-all-users') {
+        const users = await usersDb.find({});
+        for (const user of users) {
+            ctx.sendMessage(JSON.stringify(user));
+        }
+    }
 });
 
 bot.hears('Help  ❓', (ctx) => {
@@ -116,17 +132,24 @@ bot.hears('See current settings  👁️', async (ctx) => {
     ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}`);
 });
 
-const handleMessage = (ctx) => {
-
-};
+bot.hears('Admin features  🛠️', async (ctx) => {
+    const user = await handleUser(ctx.message.from);
+    if (user.isAdmin) {
+        ctx.reply('Admin features:', {reply_markup: JSON.stringify({inline_keyboard: inlineAdminFeaturesKeyboard})});
+    }
+});
 
 bot.on('message', async (ctx) => {
+    ctx.sendChatAction('typing');
     const user = await handleUser(ctx.message.from);
-    if (!user) return ctx.sendMessage('Something went wrong');
-    const needToAnswer = await handleAdmin(ctx.message.from, ctx);
-    if (!needToAnswer) return;
+    if (!user) throw 'Problems with creating / getting user';
+    const needToReturn = await handleAdmin(ctx.message.from, ctx);
+    if (needToReturn) return;
 
     const messageText = ctx.message.text;
+    if (messageText.startsWith('#maxTokens') && user.isAdmin) {
+        // return configsDb.i
+    }
     if (messageText.startsWith('draw')) {
         const drawPrompt = getSubstringAfterOccurrence(messageText, 'draw');
         const picture = await generatePicture(drawPrompt);
