@@ -2,7 +2,14 @@ const path = require('path');
 const Datastore = require('nedb-promises');
 const {Telegraf, Markup} = require('telegraf');
 const {generateAnswer, generatePicture} = require('./generator');
-const {defaultCompletionConfigs, defaultImageConfigs, defaultBotConfigs, helpText} = require('./consts');
+const {
+    defaultCompletionConfigs,
+    defaultImageConfigs,
+    defaultBotConfigs,
+    helpText,
+    adminHelpText,
+    noPermissionText,
+} = require('./consts');
 const {getSubstringAfterOccurrence} = require('./utils');
 const {
     adminKeyboard, userKeyboard, inlinePictureSizeSettingsKeyboard, inlineTemperatureSettingsKeyboard,
@@ -53,7 +60,7 @@ const handleAdmin = async (ctx, user) => {
             return true;
         } else {
             await usersDb.update({userId: user.userId}, {$set: {isAdmin: true}});
-            await ctx.sendMessage('You are admin now!\nCommands:\n#maxTokens `max number of coins`');
+            await ctx.sendMessage(`You are admin now!\n${adminHelpText}`);
             ctx.reply('Ask me any questions!', adminKeyboard);
             return true;
         }
@@ -64,13 +71,14 @@ const handleAdmin = async (ctx, user) => {
 
 const handleSpecialCommands = async (ctx, user) => {
     const messageText = ctx.message.text;
-    if (!user.isAdmin) return false;
     if (messageText?.startsWith('#maxTokens')) {
-        const newMaxTokens = Number(getSubstringAfterOccurrence(messageText, '#maxTokens '));
+        if (!user.isAdmin) return ctx.sendMessage(noPermissionText);
+        let newMaxTokens = Number(getSubstringAfterOccurrence(messageText, '#maxTokens '));
         if (!newMaxTokens) return ctx.sendMessage('Wrong format. Type: #maxTokens `numberOfMaxTokens`');
+        if (newMaxTokens < 2 || newMaxTokens > 5000) return ctx.sendMessage('Invalid number of max tokens. THINK AGAIN');
         const configs = await configsDb.findOne({});
         await configsDb.update({_id: configs._id}, {$set: {maxTokens: newMaxTokens}});
-        return ctx.sendMessage('Updated');
+        return ctx.sendMessage('Updated. yOU are VERY smart');
     }
 };
 
@@ -78,7 +86,7 @@ bot.command('start', async (ctx) => {
     const user = await handleUser(ctx.message.from);
     if (!user) return ctx.sendMessage('Something went wrong');
     const keyboard = user.isAdmin ? adminKeyboard : userKeyboard;
-    ctx.reply('Ask me any questions!', keyboard);
+    ctx.reply(helpText, keyboard);
 });
 
 bot.action(async (value, ctx) => {
@@ -95,25 +103,33 @@ bot.action(async (value, ctx) => {
     if (value.startsWith('temperature')) {
         const newTemperature = Number(getSubstringAfterOccurrence(value, 'temperature-'));
         await usersDb.update({userId: user.userId}, {$set: {temperature: newTemperature}});
+        return ctx.sendMessage('Temperature updated');
     }
     if (value.startsWith('model')) {
         const newModel = getSubstringAfterOccurrence(value, 'model-');
         await usersDb.update({userId: user.userId}, {$set: {model: newModel}});
+        return ctx.sendMessage('Model updated');
     }
     if (value.startsWith('picture-size-')) {
         const newSize = getSubstringAfterOccurrence(value, 'picture-size-');
         await usersDb.update({userId: user.userId}, {$set: {pictureSize: newSize}});
+        return ctx.sendMessage('Picture size updated');
     }
-    if (!user.isAdmin && value.startsWith('admin')) return;
-    if (value === 'admin-see-all-users') {
-        const users = await usersDb.find({});
-        for (const user of users) {
-            await ctx.sendMessage(JSON.stringify(user));
+    if (value.startsWith('admin')) {
+        if (!user.isAdmin) return ctx.sendMessage(noPermissionText);
+        if (value === 'admin-see-all-users') {
+            const users = await usersDb.find({});
+            for (const user of users) {
+                await ctx.sendMessage(JSON.stringify(user));
+            }
         }
-    }
-    if (value === 'admin-see-configs') {
-        const configs = await configsDb.findOne({});
-        await ctx.sendMessage(`Max tokens: ${configs.maxTokens}`);
+        if (value === 'admin-see-configs') {
+            const configs = await configsDb.findOne({});
+            await ctx.sendMessage(`Max tokens: ${configs.maxTokens}`);
+        }
+        if (value === 'admin-help') {
+            await ctx.sendMessage(adminHelpText);
+        }
     }
 });
 
@@ -134,6 +150,8 @@ bot.hears('Admin features  🛠️', async (ctx) => {
     const user = await handleUser(ctx.message.from);
     if (user.isAdmin) {
         ctx.reply('Admin features:', {reply_markup: JSON.stringify({inline_keyboard: inlineAdminFeaturesKeyboard})});
+    } else {
+        ctx.sendMessage(noPermissionText);
     }
 });
 
@@ -143,6 +161,8 @@ bot.on('message', async (ctx) => {
         if (!messageText) return;
 
         const user = await handleUser(ctx.message.from);
+        console.log(user.name, messageText);
+
         const configs = await configsDb.findOne({});
 
         if (await handleAdmin(ctx, user)) return;
@@ -152,6 +172,8 @@ bot.on('message', async (ctx) => {
             ctx.sendChatAction('upload_photo');
             const drawPrompt = getSubstringAfterOccurrence(messageText.toLowerCase(), 'draw');
             const picture = await generatePicture(drawPrompt, {...defaultImageConfigs, size: user?.pictureSize});
+
+            if (Array.isArray(picture) || !picture) return ctx.sendMessage(picture?.[0] || 'SOMTIN HORIBLO WRONGA');
             if (picture) return ctx.sendPhoto(picture);
         } else {
             ctx.sendChatAction('typing');

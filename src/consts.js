@@ -23,4 +23,15 @@ const helpText = 'I can answer any of your questions on various topics or draw a
     '\n\nPicture size - Resolution of pictures i draw. Lower resolutions are being drawn faster.' +
     '\n\n\nI\'m using OpenAI APIs.';
 
-module.exports = {defaultCompletionConfigs, defaultImageConfigs, defaultBotConfigs, helpText};
+const adminHelpText = 'Commands:\n#maxTokens `max number of tokens';
+
+const noPermissionText = 'You do not have permission to do that';
+
+module.exports = {
+    defaultCompletionConfigs,
+    defaultImageConfigs,
+    defaultBotConfigs,
+    helpText,
+    adminHelpText,
+    noPermissionText,
+};

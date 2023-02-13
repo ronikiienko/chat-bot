@@ -28,7 +28,6 @@ const generateAnswer = async (prompt, configs = {}) => {
             temperature: configs.temperature || defaultCompletionConfigs.temperature,
             max_tokens: configs.maxTokens || defaultCompletionConfigs.maxTokens,
         });
-        console.log(completion.data);
         return completion.data.choices[0].text;
     } catch (e) {
         if (e.response.status === 429) return 'Error: Wait a bit. Too many requests from users';
@@ -48,9 +47,9 @@ const generatePicture = async (prompt, configs = {}) => {
         });
         return response.data.data[0].url;
     } catch (e) {
-        if (e.response.status === 429) return 'Error: Wait a bit. Too many requests from users';
-        console.log('errrrrrror:(', e.message, e.response.status, e);
-        return undefined;
+        if (e.response.status === 429) return ['Error: Wait a bit. Too many requests from users'];
+        if (e.response.status === 400) return ['THERE\'S A BAD WORD. SHUT UP'];
+        return ['SAMTIN WENT HORRIBLO WRONGA'];
     }
 };
 
