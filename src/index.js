@@ -2,58 +2,30 @@ const path = require('path');
 const Datastore = require('nedb-promises');
 const {Telegraf, Markup} = require('telegraf');
 const {generateAnswer, generatePicture} = require('./generator');
-const {defaultCompletionConfigs, defaultImageConfigs} = require('./consts');
+const {defaultCompletionConfigs, defaultImageConfigs, defaultBotConfigs, helpText} = require('./consts');
 const {getSubstringAfterOccurrence} = require('./utils');
+const {
+    adminKeyboard, userKeyboard, inlinePictureSizeSettingsKeyboard, inlineTemperatureSettingsKeyboard,
+    inlineModelSettingsKeyboard, inlineSettingsKeyboard, inlineAdminFeaturesKeyboard,
+} = require('./markup');
 
 let usersDb = Datastore.create(path.join('users.db'));
 let configsDb = Datastore.create(path.join('configs.db'));
-usersDb.compactDatafile();
+
+const initializeConfigs = async () => {
+    const configs = await configsDb.findOne({});
+    if (!configs) {
+        await configsDb.insertOne(defaultBotConfigs);
+        console.log('Configs db initialized');
+    }
+};
+
+initializeConfigs()
+    .catch(console.log);
+
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const userKeyboard = Markup.keyboard([
-    ['Settings  ⚙️'],
-    ['See current settings  👁️'],
-    ['Help  ❓'],
-]).oneTime().resize();
-
-const adminKeyboard = Markup.keyboard([
-    ['Settings  ⚙️'],
-    ['See current settings  👁️'],
-    ['Help  ❓'],
-    ['Admin features  🛠️'],
-]).oneTime().resize();
-
-const inlineSettingsKeyboard = [[
-    {text: 'Set model', callback_data: 'set-model'},
-    {text: 'Set temperature', callback_data: 'set-temperature'},
-    {text: 'Set picture size', callback_data: 'set-picture-size'},
-]];
-
-const inlineModelSettingsKeyboard = [[
-    {text: 'Davinci', callback_data: 'model-text-davinci-003'},
-    {text: 'Curie', callback_data: 'model-text-curie-001'},
-    {text: 'Babbage', callback_data: 'model-text-babbage-001'},
-    {text: 'Ada', callback_data: 'model-text-ada-001'},
-]];
-
-const inlineTemperatureSettingsKeyboard = [[
-    {text: '0', callback_data: 'temperature-0'},
-    {text: '0.25', callback_data: 'temperature-0.25'},
-    {text: '0.5', callback_data: 'temperature-0.5'},
-    {text: '0.75', callback_data: 'temperature-0.75'},
-    {text: '1', callback_data: 'temperature-1'},
-]];
-
-const inlinePictureSizeSettingsKeyboard = [[
-    {text: '256x256', callback_data: 'picture-size-256x256'},
-    {text: '512x512', callback_data: 'picture-size-512x512'},
-    {text: '1024x1024', callback_data: 'picture-size-1024x1024'},
-]];
-
-const inlineAdminFeaturesKeyboard = [[
-    {text: 'See all users', callback_data: 'admin-see-all-users'},
-    {text: 'See configs', callback_data: 'admin-see-configs'},
-]];
 
 const handleUser = async (from) => {
     const existingUser = await usersDb.findOne({userId: from.id});
@@ -97,15 +69,8 @@ const handleSpecialCommands = async (ctx, user) => {
         const newMaxTokens = Number(getSubstringAfterOccurrence(messageText, '#maxTokens '));
         if (!newMaxTokens) return ctx.sendMessage('Wrong format. Type: #maxTokens `numberOfMaxTokens`');
         const configs = await configsDb.findOne({});
-        if (configs) {
-            await configsDb.update({_id: configs._id}, {$set: {maxTokens: newMaxTokens}});
-            return ctx.sendMessage('Updated');
-        } else {
-            await configsDb.insertOne({
-                maxTokens: newMaxTokens,
-            });
-            return ctx.sendMessage('Updated');
-        }
+        await configsDb.update({_id: configs._id}, {$set: {maxTokens: newMaxTokens}});
+        return ctx.sendMessage('Updated');
     }
 };
 
@@ -119,13 +84,13 @@ bot.command('start', async (ctx) => {
 bot.action(async (value, ctx) => {
     const user = await handleUser(ctx.update.callback_query.from);
     if (value === 'set-temperature') {
-        ctx.reply('Set temperature. The more the temperature - the more risky and chaotic answers are', {reply_markup: JSON.stringify({inline_keyboard: inlineTemperatureSettingsKeyboard})});
+        await ctx.reply('Set temperature. The more the temperature - the more risky and chaotic answers are', {reply_markup: JSON.stringify({inline_keyboard: inlineTemperatureSettingsKeyboard})});
     }
     if (value === 'set-model') {
-        ctx.reply('Set AI model. Davinci is most advanced, but the slowest. Ada is the fastest but least advanced. But still, less advanced ones can perform some tasks well.', {reply_markup: JSON.stringify({inline_keyboard: inlineModelSettingsKeyboard})});
+        await ctx.reply('Set AI model. Davinci is most advanced, but the slowest. Ada is the fastest but least advanced. But still, less advanced ones can perform some tasks well.', {reply_markup: JSON.stringify({inline_keyboard: inlineModelSettingsKeyboard})});
     }
     if (value === 'set-picture-size') {
-        ctx.reply('Set picture size. Lower resolutions are being drawn faster.', {reply_markup: JSON.stringify({inline_keyboard: inlinePictureSizeSettingsKeyboard})});
+        await ctx.reply('Set picture size. Lower resolutions are being drawn faster.', {reply_markup: JSON.stringify({inline_keyboard: inlinePictureSizeSettingsKeyboard})});
     }
     if (value.startsWith('temperature')) {
         const newTemperature = Number(getSubstringAfterOccurrence(value, 'temperature-'));
@@ -143,7 +108,7 @@ bot.action(async (value, ctx) => {
     if (value === 'admin-see-all-users') {
         const users = await usersDb.find({});
         for (const user of users) {
-            ctx.sendMessage(JSON.stringify(user));
+            await ctx.sendMessage(JSON.stringify(user));
         }
     }
     if (value === 'admin-see-configs') {
@@ -153,7 +118,7 @@ bot.action(async (value, ctx) => {
 });
 
 bot.hears('Help  ❓', (ctx) => {
-    ctx.sendMessage('I can answer your questions, or maintain dialog, but mainly answer questions. For example you can ask me to tell you a story about Mighty Mouser. The more temperature value is - the more risky my answers are. \n\n I\'m using OpenAI text completion API. ');
+    ctx.sendMessage(helpText);
 });
 
 bot.hears('Settings  ⚙️', (ctx) => {
@@ -191,6 +156,7 @@ bot.on('message', async (ctx) => {
         } else {
             ctx.sendChatAction('typing');
             const answer = await generateAnswer(messageText, {
+                ...defaultCompletionConfigs,
                 model: user?.model,
                 temperature: user?.temperature,
                 maxTokens: configs.maxTokens,
@@ -198,6 +164,7 @@ bot.on('message', async (ctx) => {
             if (answer) ctx.sendMessage(answer);
         }
     } catch (e) {
+        console.log(e);
         ctx.sendMessage('Something went horribly wrong');
     }
 
