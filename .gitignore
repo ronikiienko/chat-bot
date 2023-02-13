@@ -2,3 +2,4 @@
 /node_modules/
 /db.db
 /users.db
+/configs.db
