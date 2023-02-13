@@ -197,5 +197,3 @@ bot.catch((err) => {
 });
 
 bot.launch();
-
-// TODO send something to user when error 400 in picture getting (bad words)
