@@ -11,7 +11,7 @@ const defaultImageConfigs = {
 };
 
 const defaultBotConfigs = {
-    maxTokens: 1,
+    maxTokens: 100,
 };
 
 const helpText = 'I can answer any of your questions on various topics or draw anything' +
