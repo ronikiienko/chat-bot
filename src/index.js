@@ -15,9 +15,12 @@ const {
     adminKeyboard, userKeyboard, inlinePictureSizeSettingsKeyboard, inlineTemperatureSettingsKeyboard,
     inlineModelSettingsKeyboard, inlineSettingsKeyboard, inlineAdminFeaturesKeyboard,
 } = require('./markup');
+const fs = require('fs-extra');
 
-let usersDb = Datastore.create(path.join('users.db'));
-let configsDb = Datastore.create(path.join('configs.db'));
+fs.ensureDir('./data')
+    .catch(console.log);
+let usersDb = Datastore.create(path.join('data', 'users.db'));
+let configsDb = Datastore.create(path.join('data', 'configs.db'));
 
 const initializeConfigs = async () => {
     const configs = await configsDb.findOne({});
