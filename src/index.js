@@ -1,6 +1,6 @@
 const path = require('path');
 const Datastore = require('nedb-promises');
-const {Telegraf, Markup} = require('telegraf');
+const {Telegraf} = require('telegraf');
 const {generateAnswer, generatePicture} = require('./generator');
 const {
     defaultCompletionConfigs,
