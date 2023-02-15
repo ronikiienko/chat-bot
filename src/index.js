@@ -16,41 +16,23 @@ const {
     inlineModelSettingsKeyboard, inlineSettingsKeyboard, inlineAdminFeaturesKeyboard,
 } = require('./markup');
 const fs = require('fs-extra');
-
-fs.ensureDir('./data')
-    .catch(console.log);
-const logFilePath = path.join('data', 'logs.txt');
-const usersDbPath = path.join('data', 'users.txt');
-const configsDbPath = path.join('data', 'configs.txt');
-fs.ensureFile(logFilePath);
-let usersDb = Datastore.create(usersDbPath);
-let configsDb = Datastore.create(configsDbPath);
-
-const initializeConfigs = async () => {
-    const configs = await configsDb.findOne({});
-    if (!configs) {
-        await configsDb.insertOne(defaultBotConfigs);
-        console.log('Configs db initialized');
-    }
-};
-
-initializeConfigs()
-    .catch(console.log);
+const {usersDb, configsDb, usersDbPath, configsDbPath} = require('./db');
+const {logFilePath, createLog} = require('./logs');
 
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-
-
+createLog('Script started');
 const handleUser = async (from) => {
     const existingUser = await usersDb.findOne({userId: from.id});
     if (existingUser) {
         return existingUser;
     } else {
-        console.log('creating new user', `${from.first_name}, ${from.last_name}`);
+        createLog(`Creating new user:\nFirst name: ${from.first_name},\nLast name: ${from.last_name},\nUsername: ${from.username}`);
         return await usersDb.insertOne({
             isAdmin: false,
             userId: from.id,
-            name: `${from.first_name}, ${from.last_name}`,
+            firstName: from.first_name,
+            lastName: from.last_name,
             username: from.username,
             temperature: defaultCompletionConfigs.temperature,
             model: defaultCompletionConfigs.model,
@@ -70,6 +52,7 @@ const handleAdmin = async (ctx, user) => {
             await usersDb.update({userId: user.userId}, {$set: {isAdmin: true}});
             await ctx.sendMessage(`You are admin now!\n${adminHelpText}`);
             ctx.reply('Ask me any questions!', adminKeyboard);
+            createLog(`User ${user.firstName} is now admin`);
             return true;
         }
     } else {
@@ -86,6 +69,7 @@ const handleSpecialCommands = async (ctx, user) => {
         if (newMaxTokens < 2 || newMaxTokens > 5000) return ctx.sendMessage('Invalid number of max tokens. THINK AGAIN');
         const configs = await configsDb.findOne({});
         await configsDb.update({_id: configs._id}, {$set: {maxTokens: newMaxTokens}});
+        createLog(`Number of maxTokens was updated by user ${user.firstName}. New value: ${newMaxTokens}`);
         return ctx.sendMessage('Updated. yOU are VERY smart');
     }
 };
@@ -171,8 +155,8 @@ bot.on('message', async (ctx) => {
         if (!messageText) return;
 
         const user = await handleUser(ctx.message.from);
-        fs.appendFile(logFilePath, `${new Date().toGMTString()}\nUser ${user.name} (${user.userId}):\n${messageText.replace('/\\s\\s+/g', ' ')}\n\n`);
-        console.log(user.name, messageText);
+
+        createLog(`User ${user.firstName} send message:\n${messageText.replace('/\\s\\s+/g', ' ')}`);
 
         const configs = await configsDb.findOne({});
 
@@ -184,8 +168,14 @@ bot.on('message', async (ctx) => {
             const drawPrompt = getSubstringAfterOccurrence(messageText.toLowerCase(), 'draw');
             const picture = await generatePicture(drawPrompt, {...defaultImageConfigs, size: user?.pictureSize});
 
-            if (Array.isArray(picture) || !picture) return ctx.sendMessage(picture?.[0] || 'SOMTIN HORIBLO WRONGA');
-            if (picture) return ctx.sendPhoto(picture);
+            if (Array.isArray(picture) || !picture) {
+                createLog(`Bot responsed rudely. User ${user.firstName} requested very bad word`);
+                return ctx.sendMessage(picture?.[0] || 'SOMTIN HORIBLO WRONGA');
+            }
+            if (picture) {
+                createLog(`Bot sent picture to user ${user.firstName}`);
+                return ctx.sendPhoto(picture);
+            }
         } else {
             ctx.sendChatAction('typing');
             const answer = await generateAnswer(messageText, {
@@ -194,19 +184,18 @@ bot.on('message', async (ctx) => {
                 temperature: user?.temperature,
                 maxTokens: configs.maxTokens,
             });
-            fs.appendFile(logFilePath, `${new Date().toGMTString()}\nBot answer to user ${user.name} (${user.userId}):\n${answer.replace(/  +/g, ' ')}\n\n`);
-            console.log(user.name, 'Bot answer:', answer.replaceAll('\n', ''));
+            createLog(`Bot answer to user ${user.firstName}:${answer.replace('\n', ' ')}`);
             if (answer) ctx.sendMessage(answer);
         }
     } catch (e) {
-        console.log(e);
+        createLog(`ERROR ERROR ERROR: Error in message handler:\n${e.message}`);
         ctx.sendMessage('Something went horribly wrong');
     }
 
 });
 
 bot.catch((err) => {
-    console.log('Ooopsie', err);
+    createLog(`ERROR ERROR ERROR: Bot.catch catched error\n${err.message}`);
 });
 
 bot.launch();
