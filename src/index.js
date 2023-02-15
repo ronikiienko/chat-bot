@@ -187,7 +187,7 @@ bot.on('message', async (ctx) => {
                 temperature: user?.temperature,
                 maxTokens: configs.maxTokens,
             });
-            console.log(user.name, 'Bot answer:', answer);
+            console.log(user.name, 'Bot answer:', answer.replaceAll('\n', ''));
             if (answer) ctx.sendMessage(answer);
         }
     } catch (e) {
