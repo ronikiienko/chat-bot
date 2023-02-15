@@ -18,6 +18,7 @@ const {logFilePath, createLog} = require('./logs');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.telegram.sendMessage('1341617895', 'hello, i\'m back. password is same. https://music.youtube.com/watch?v=jFAA6Z_YIEM&feature=share');
+bot.telegram.sendMessage('942540257', 'hello, i\'m back. password is same. https://music.youtube.com/watch?v=jFAA6Z_YIEM&feature=share');
 
 createLog('Script started');
 const handleUser = async (from) => {
