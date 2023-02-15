@@ -21,7 +21,7 @@ const helpText = 'I can answer any of your questions on various topics or draw a
     '\n\nModel - Set AI model. Davinci is smartest, but slowest. Ada is fastest but STUPID. Still, less advanced ones can perform some tasks quite well. ' +
     '\n\nTemperature - The more the temperature - the more risky and chaotic answers are ' +
     '\n\nPicture size - Resolution of pictures i draw. Lower resolutions are being drawn faster.' +
-    '\n\n\nI\'m using OpenAI APIs.';
+    '\n\n\nI\'m using OpenAI APIs. KEEP IN MIND, THAT I CAN\'T KEEP CONTEXT OF CONVERSATION. I CAN ONLY ANSWER YOUR QUESTIONS. It is best to ask in English.';
 
 const adminHelpText = 'Commands:\n#maxTokens `max number of tokens';
 
