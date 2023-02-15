@@ -109,10 +109,7 @@ bot.action(async (value, ctx) => {
     if (value.startsWith('admin')) {
         if (!user.isAdmin) return ctx.sendMessage(noPermissionText);
         if (value === 'admin-see-all-users') {
-            const users = await usersDb.find({});
-            for (const user of users) {
-                await ctx.sendDocument({source: usersDbPath});
-            }
+            await ctx.sendDocument({source: usersDbPath});
         }
         if (value === 'admin-see-configs') {
             await ctx.sendDocument({source: configsDbPath});
