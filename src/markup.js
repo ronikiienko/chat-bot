@@ -41,6 +41,7 @@ const inlinePictureSizeSettingsKeyboard = [[
 
 const inlineAdminFeaturesKeyboard = [[
     {text: 'See all users', callback_data: 'admin-see-all-users'},
+    {text: 'See logs', callback_data: 'admin-see-logs'},
     {text: 'See configs', callback_data: 'admin-see-configs'},
     {text: 'Admin help', callback_data: 'admin-help'},
 ]];

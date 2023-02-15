@@ -19,8 +19,12 @@ const fs = require('fs-extra');
 
 fs.ensureDir('./data')
     .catch(console.log);
-let usersDb = Datastore.create(path.join('data', 'users.db'));
-let configsDb = Datastore.create(path.join('data', 'configs.db'));
+const logFilePath = path.join('data', 'logs.txt');
+const usersDbPath = path.join('data', 'users.txt');
+const configsDbPath = path.join('data', 'configs.txt');
+fs.ensureFile(logFilePath);
+let usersDb = Datastore.create(usersDbPath);
+let configsDb = Datastore.create(configsDbPath);
 
 const initializeConfigs = async () => {
     const configs = await configsDb.findOne({});
@@ -124,15 +128,17 @@ bot.action(async (value, ctx) => {
         if (value === 'admin-see-all-users') {
             const users = await usersDb.find({});
             for (const user of users) {
-                await ctx.sendMessage(JSON.stringify(user));
+                await ctx.sendDocument({source: usersDbPath});
             }
         }
         if (value === 'admin-see-configs') {
-            const configs = await configsDb.findOne({});
-            await ctx.sendMessage(`Max tokens: ${configs.maxTokens}`);
+            await ctx.sendDocument({source: configsDbPath});
         }
         if (value === 'admin-help') {
             await ctx.sendMessage(adminHelpText);
+        }
+        if (value === 'admin-see-logs') {
+            await ctx.sendDocument({source: logFilePath});
         }
     }
 });
@@ -165,6 +171,7 @@ bot.on('message', async (ctx) => {
         if (!messageText) return;
 
         const user = await handleUser(ctx.message.from);
+        fs.appendFile(logFilePath, `${new Date().toGMTString()}\nUser ${user.name} (${user.userId}):\n${messageText.replace('/\\s\\s+/g', ' ')}\n\n`);
         console.log(user.name, messageText);
 
         const configs = await configsDb.findOne({});
@@ -187,6 +194,7 @@ bot.on('message', async (ctx) => {
                 temperature: user?.temperature,
                 maxTokens: configs.maxTokens,
             });
+            fs.appendFile(logFilePath, `${new Date().toGMTString()}\nBot answer to user ${user.name} (${user.userId}):\n${answer.replace(/  +/g, ' ')}\n\n`);
             console.log(user.name, 'Bot answer:', answer.replaceAll('\n', ''));
             if (answer) ctx.sendMessage(answer);
         }
