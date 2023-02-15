@@ -42,7 +42,7 @@ const handleUser = async (from) => {
     if (existingUser) {
         return existingUser;
     } else {
-        console.log('creating new user');
+        console.log('creating new user', `${from.first_name}, ${from.last_name}`);
         return await usersDb.insertOne({
             isAdmin: false,
             userId: from.id,
@@ -51,6 +51,7 @@ const handleUser = async (from) => {
             temperature: defaultCompletionConfigs.temperature,
             model: defaultCompletionConfigs.model,
             pictureSize: defaultImageConfigs.size,
+            timeAdded: Date.now(),
         });
     }
 };
@@ -186,6 +187,7 @@ bot.on('message', async (ctx) => {
                 temperature: user?.temperature,
                 maxTokens: configs.maxTokens,
             });
+            console.log(user.name, 'Bot answer:', answer);
             if (answer) ctx.sendMessage(answer);
         }
     } catch (e) {
