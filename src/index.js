@@ -1,11 +1,8 @@
-const path = require('path');
-const Datastore = require('nedb-promises');
 const {Telegraf} = require('telegraf');
 const {generateAnswer, generatePicture} = require('./generator');
 const {
     defaultCompletionConfigs,
     defaultImageConfigs,
-    defaultBotConfigs,
     helpText,
     adminHelpText,
     noPermissionText,
@@ -15,12 +12,13 @@ const {
     adminKeyboard, userKeyboard, inlinePictureSizeSettingsKeyboard, inlineTemperatureSettingsKeyboard,
     inlineModelSettingsKeyboard, inlineSettingsKeyboard, inlineAdminFeaturesKeyboard,
 } = require('./markup');
-const fs = require('fs-extra');
 const {usersDb, configsDb, usersDbPath, configsDbPath} = require('./db');
 const {logFilePath, createLog} = require('./logs');
+const {spoiler, strikethrough} = require('telegraf/format');
 
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
 createLog('Script started');
 const handleUser = async (from) => {
     const existingUser = await usersDb.findOne({userId: from.id});
@@ -127,25 +125,47 @@ bot.action(async (value, ctx) => {
     }
 });
 
-bot.hears('Help  ❓', (ctx) => {
-    ctx.sendMessage(helpText);
-});
+// bot.hears(async (value, ctx) => {
+//     const user = await handleUser(ctx.message.from);
+//     switch (value) {
+//         case 'Help  ❓': {
+//             await ctx.sendMessage(strikethrough(helpText), {parse_mode: 'MarkdownV2'})
+//         }
+//         break;
+//         case 'Settings  ⚙️': {
+//             await ctx.reply('Settings:', {reply_markup: JSON.stringify({inline_keyboard: inlineSettingsKeyboard})});
+//         }
+//         break;
+//         case 'See current settings  👁️': {
+//             await ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}\nPicture size 📷: ${user.pictureSize}`);
+//         }
+//         break;
+//         case 'Admin features  🛠️': {
+//             if (user.isAdmin) {
+//                 await ctx.reply('Admin features:', {reply_markup: JSON.stringify({inline_keyboard: inlineAdminFeaturesKeyboard})});
+//             } else {
+//                 await ctx.sendMessage(noPermissionText);
+//             }
+//         }
+//     }
+// })
 
-bot.hears('Settings  ⚙️', (ctx) => {
-    ctx.reply('Settings:', {reply_markup: JSON.stringify({inline_keyboard: inlineSettingsKeyboard})});
+bot.hears('Help  ❓', async (ctx) => {
+    await ctx.sendMessage(helpText);
 });
-
+bot.hears('Settings  ⚙️', async (ctx) => {
+    await ctx.reply('Settings:', {reply_markup: JSON.stringify({inline_keyboard: inlineSettingsKeyboard})});
+});
 bot.hears('See current settings  👁️', async (ctx) => {
     const user = await handleUser(ctx.message.from);
-    ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}\nPicture size 📷: ${user.pictureSize}`);
+    await ctx.sendMessage(`Temperature 🌡️ : ${user.temperature}\nModel 🧍: ${user.model}\nPicture size 📷: ${user.pictureSize}`);
 });
-
 bot.hears('Admin features  🛠️', async (ctx) => {
     const user = await handleUser(ctx.message.from);
     if (user.isAdmin) {
-        ctx.reply('Admin features:', {reply_markup: JSON.stringify({inline_keyboard: inlineAdminFeaturesKeyboard})});
+        await ctx.reply('Admin features:', {reply_markup: JSON.stringify({inline_keyboard: inlineAdminFeaturesKeyboard})});
     } else {
-        ctx.sendMessage(noPermissionText);
+        await ctx.sendMessage(noPermissionText);
     }
 });
 

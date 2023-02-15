@@ -7,7 +7,7 @@ fs.ensureFile(logFilePath);
 
 const createLog = (logText) => {
     console.log(logText);
-    fs.appendFile(logFilePath, `\n${new Date().toGMTString()}\n${logText}\n`, {encoding: 'u'});
+    fs.appendFile(logFilePath, `\n${new Date().toGMTString()}\n${logText}\n`);
 };
 
 module.exports = {createLog, logFilePath};
